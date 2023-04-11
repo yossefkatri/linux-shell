@@ -1,13 +1,6 @@
-#include "libs.h"
-#include "consts.h"
+#include "utils.h"
 
-void debugPrint(const char* value, bool isDebug)
-{
-    if(isDebug)
-    {
-        printf(value);
-    }
-}
+
 char** getArgsList(char command[])
 {
     char** args= (char**)malloc(PARAMS_NUM*sizeof(char*));
@@ -22,20 +15,27 @@ char** getArgsList(char command[])
     args[i] = NULL;
     return args;
 }
-void executeCommand(char command[])
+void executeCommand(char command[],bool isDebug)
 {
     pid_t pid = fork();
     if (pid == 0)
     {
         //child proccess
         char** argv = getArgsList(command);
+        char* buffer = (char*) malloc((16+strlen(command))*sizeof(char)+1);
+        strcat(buffer,"Execute command ");
+        strcat(buffer,command);
+        printMessage(getpid(),buffer,isDebug);
+        free(buffer);
         execvp(argv[0],argv);
-        perror("Error");
+        perror("Failed to execute command");
+        printf("please see debug mode for more details\n");
         exit(1);
     }
     else if (pid > 0)
     {
         //father proccess
+        printMessage(getpid(),"Succesfully started child proccess",isDebug);
         int status;
         pid_t result = wait(&status);
         if (result == -1)
@@ -50,12 +50,14 @@ void executeCommand(char command[])
 }
  void main(int argc, char *argv[])
 {
-    bool isdebug =false;
+    bool isDebug = false;
+    printf("welcome to my mini shell, terminate send exit");
+    printf("\n");
     if (argc > 1 && !strcmp(argv[1],DEBUG_CONST))
     {
-        isdebug = true;
+        isDebug = true;
     }
-    debugPrint("debug mode on\n",isdebug);
+    debugPrint("debug mode on",isDebug);
     char input[INPUT_LENGTH]="";
     do
     {
@@ -63,8 +65,10 @@ void executeCommand(char command[])
         gets(input);
         if(!strcmp(EXIT,input))
         {
+            debugPrint("get exit signal",isDebug);
+            printMessage(getpid(),"Father proccess is terminated",isDebug);
             return;
         }
-        executeCommand(input);
+        executeCommand(input,isDebug);
     }while(1);
 }
